@@ -1,7 +1,6 @@
 package com.example.absassignment.ui.components
 
 import android.net.Uri
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,12 +19,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -54,8 +53,7 @@ import com.google.gson.Gson
 
 @Composable
 fun UserListScreen(navController: NavController, viewModel: UserViewModel = hiltViewModel()) {
-    var userCount by remember { mutableStateOf("20") }
-    val keyboardController = LocalSoftwareKeyboardController.current
+
     val uiState by viewModel.uiState.observeAsState(UserViewModel.UserUiState.Loading)
 
     LaunchedEffect(uiState) {
@@ -63,65 +61,81 @@ fun UserListScreen(navController: NavController, viewModel: UserViewModel = hilt
             viewModel.fetchUsers(20)
         }
     }
-        Column {
+    Column {
 
-            TextField(
-                value = userCount,
-                onValueChange = { userCount = it },
-                label = { Text("Enter number of users") },
-                modifier = Modifier.fillMaxWidth().background(Color.White)
+        SearchBar(viewModel)
 
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                Button(onClick = {
-                    viewModel.fetchUsers(userCount.toIntOrNull() ?: 20)
-                    keyboardController?.hide()
-                }) {
-                    Text(text = "Get Users")
+        when (uiState) {
+            is UserViewModel.UserUiState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
             }
 
-
-            when (uiState) {
-                is UserViewModel.UserUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize()){
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            is UserViewModel.UserUiState.Success -> {
+                val users = (uiState as UserViewModel.UserUiState.Success).users
+                LazyColumn {
+                    items(users) { user ->
+                        UserCard(user, navController)
                     }
-                }
-
-                is UserViewModel.UserUiState.Success -> {
-                    val users = (uiState as UserViewModel.UserUiState.Success).users
-                    LazyColumn {
-                        items(users) { user ->
-                            UserCard(user, navController)
-                        }
-                    }
-                }
-
-                is UserViewModel.UserUiState.Error -> {
-                    val message = (uiState as UserViewModel.UserUiState.Error).message
-                    Text(
-                        text = message,
-                        color = Color.Red,
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
-                    )
                 }
             }
+
+            is UserViewModel.UserUiState.Error -> {
+                val message = (uiState as UserViewModel.UserUiState.Error).message
+                Text(
+                    text = message,
+                    color = Color.Red,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
+        }
 
     }
 }
 
 @Composable
-fun UserCard(user: User,navController: NavController) {
+fun SearchBar(viewModel: UserViewModel) {
+    var userCount by remember { mutableStateOf("20") }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(8.dp)
+    ) {
+
+        OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = userCount,
+            label = { Text("Enter number of users") },
+            onValueChange = {
+                userCount = it
+            },
+            shape = RoundedCornerShape(12.dp)
+        )
+    }
+
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        Button(onClick = {
+            viewModel.fetchUsers(userCount.toIntOrNull() ?: 20)
+            keyboardController?.hide()
+        }) {
+            Text(text = "Get Users")
+        }
+    }
+}
+
+
+@Composable
+fun UserCard(user: User, navController: NavController) {
     Card(
         modifier = Modifier
-            .padding(10.dp)
+            .padding(5.dp)
             .clickable {
                 val userJson = Gson().toJson(user)
                 val encodedJson = Uri.encode(userJson)
@@ -132,11 +146,12 @@ fun UserCard(user: User,navController: NavController) {
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
 
     ) {
-        Row(modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White)
-            .defaultMinSize(minHeight = 100.dp)
-            .padding(5.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White)
+                .defaultMinSize(minHeight = 100.dp)
+                .padding(5.dp),
             verticalAlignment = Alignment.CenterVertically
 
         ) {
@@ -144,19 +159,23 @@ fun UserCard(user: User,navController: NavController) {
             AsyncImage(
                 model = user.picture.thumbnail,
                 contentDescription = "User Profile Picture",
-                modifier = Modifier.size(60.dp).clip(CircleShape),
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(CircleShape),
                 placeholder = painterResource(id = R.drawable.ic_launcher_background),
                 error = painterResource(id = R.drawable.ic_launcher_background),
             )
 
             Spacer(modifier = Modifier.width(10.dp))
 
-            Column(modifier = Modifier
-                .fillMaxHeight()
-                .weight(1f),
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(1f),
                 verticalArrangement = Arrangement.Center,
-            ){
-                Text(text = "${user.name.first} ${user.name.last}",
+            ) {
+                Text(
+                    text = "${user.name.first} ${user.name.last}",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -164,11 +183,15 @@ fun UserCard(user: User,navController: NavController) {
                     color = Color(0xFFFF5733)
                 )
                 Spacer(modifier = Modifier.height(5.dp))
-                Text(text = "${user.location.street.name}, ${user.location.city}, ${user.location.country}",
-                     fontSize = 14.sp,
-                     maxLines = 1)
+                Text(
+                    text = "${user.location.street.name}, ${user.location.city}, ${user.location.country}",
+                    fontSize = 14.sp,
+                    maxLines = 1
+                )
             }
         }
 
     }
+
+
 }

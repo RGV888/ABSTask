@@ -48,13 +48,11 @@ class UserViewModelTest {
 
     @Test
     fun `fetchUsers should return error state when fetching users fails`() = runTest {
-        // Given
         coEvery { mockRepository.getUsers(2) } throws Exception("Network error")
 
-        // When
         userViewModel.fetchUsers(2)
         advanceUntilIdle()
-        // Then
+
         userViewModel.uiState.observeForever { state ->
             assert(state is UserViewModel.UserUiState.Error)
             assert((state as UserViewModel.UserUiState.Error).message == "Failed to fetch users: Network error")
@@ -63,14 +61,11 @@ class UserViewModelTest {
 
     @Test
     fun `fetchUsers should show loading state before fetching users`() = runTest {
-        // Given
         coEvery { mockRepository.getUsers(2) } returns emptyList() // Adjust as needed
 
-        // When
         userViewModel.fetchUsers(2)
 
 
-        // Then
         val state = userViewModel.uiState.value
         assert(state is UserViewModel.UserUiState.Loading)
     }
