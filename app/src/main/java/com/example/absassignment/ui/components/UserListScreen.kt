@@ -56,14 +56,14 @@ fun UserListScreen(navController: NavController, viewModel: UserViewModel = hilt
 
     val uiState by viewModel.uiState.observeAsState(UserViewModel.UserUiState.Loading)
 
-    LaunchedEffect(uiState) {
-        if (uiState is UserViewModel.UserUiState.Loading) {
-            viewModel.fetchUsers(20)
-        }
-    }
+
     Column {
 
         SearchBar(viewModel)
+
+        LaunchedEffect(Unit) {
+            viewModel.fetchUsers(20)
+        }
 
         when (uiState) {
             is UserViewModel.UserUiState.Loading -> {
@@ -122,8 +122,23 @@ fun SearchBar(viewModel: UserViewModel) {
         contentAlignment = Alignment.Center
     ) {
         Button(onClick = {
-            viewModel.fetchUsers(userCount.toIntOrNull() ?: 20)
-            keyboardController?.hide()
+//            viewModel.fetchUsers(userCount.toIntOrNull() ?: 20)
+//            keyboardController?.hide()
+
+            val count = userCount.toIntOrNull() // Try to parse the input
+            if (count != null && count > 0) {
+                // If valid number, fetch that number of users
+                viewModel.fetchUsers(count)
+                keyboardController?.hide()
+            } else {
+                // Invalid input, show an error message
+              //  errorMessage = "Please enter a valid number"
+                if (userCount.isEmpty()) {
+                    // If input is empty, fetch the default 20 users
+                    viewModel.fetchUsers(20)
+                }
+             }
+
         }) {
             Text(text = "Get Users")
         }
